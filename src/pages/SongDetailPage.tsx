@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Icon from "@/components/ui/icon"
-import { songs } from "@/data/songs"
+import { songs, loadCustomSongs, saveCustomSong } from "@/data/songs"
 import type { Song, SongExercise, FillEx, MatchEx, OrderEx } from "@/data/songs"
 
 const glassStyle = {
@@ -278,7 +278,8 @@ function ExerciseEditor({ exercises, onChange }: { exercises: SongExercise[]; on
 export function SongDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const baseSong = songs.find(s => s.id === id)
+  const baseSong = songs.find(s => s.id === id) ?? loadCustomSongs().find(s => s.id === id)
+  const isCustom = !!id?.startsWith("custom-")
 
   const [songData, setSongData] = useState<Song | null>(baseSong ?? null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -286,6 +287,7 @@ export function SongDetailPage() {
   const [currentTask, setCurrentTask] = useState(0)
   const [tasksDone, setTasksDone] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  const [saved, setSaved] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const updateExercises = useCallback((exs: SongExercise[]) => {
@@ -293,6 +295,13 @@ export function SongDetailPage() {
     setCurrentTask(0)
     setTasksDone(false)
   }, [])
+
+  const handleSave = useCallback(() => {
+    if (!songData || !isCustom) return
+    saveCustomSong(songData)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }, [songData, isCustom])
 
   if (!songData) {
     return (
@@ -338,12 +347,22 @@ export function SongDetailPage() {
             style={{ backdropFilter: "blur(10px)" }}>
             <Icon name="ArrowLeft" size={16} />Все песни
           </button>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setEditMode(v => !v)}
-            className={`flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium transition-all ${editMode ? "bg-purple-100 text-purple-700 border border-purple-300" : "bg-white/60 border border-white/80 text-gray-600 hover:bg-white/80"}`}
-            style={{ backdropFilter: "blur(10px)" }}>
-            <Icon name={editMode ? "Check" : "Settings2"} size={15} />
-            {editMode ? "Готово" : "Редактировать"}
-          </motion.button>
+          <div className="flex items-center gap-2">
+            {editMode && isCustom && (
+              <motion.button whileTap={{ scale: 0.95 }} onClick={handleSave}
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium transition-all ${saved ? "bg-green-100 text-green-700 border border-green-300" : "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md"}`}
+                style={{ backdropFilter: "blur(10px)" }}>
+                <Icon name={saved ? "Check" : "Save"} size={15} />
+                {saved ? "Сохранено!" : "Сохранить"}
+              </motion.button>
+            )}
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setEditMode(v => !v)}
+              className={`flex items-center gap-1.5 h-9 px-3 rounded-full text-sm font-medium transition-all ${editMode ? "bg-purple-100 text-purple-700 border border-purple-300" : "bg-white/60 border border-white/80 text-gray-600 hover:bg-white/80"}`}
+              style={{ backdropFilter: "blur(10px)" }}>
+              <Icon name={editMode ? "X" : "Settings2"} size={15} />
+              {editMode ? "Закрыть" : "Редактировать"}
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Hero */}
