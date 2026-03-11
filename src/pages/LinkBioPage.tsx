@@ -14,7 +14,7 @@ const links = [
   {
     title: "Английский по песням",
     description: "Учим язык через музыку",
-    href: "#",
+    href: "/songs",
     icon: Youtube,
   },
   {
