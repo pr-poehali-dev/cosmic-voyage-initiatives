@@ -2,36 +2,36 @@ import { motion } from "framer-motion"
 import { ProfileSection } from "@/components/ProfileSection"
 import { LinkCard } from "@/components/LinkCard"
 import { SocialFooter } from "@/components/SocialFooter"
-import { Globe, Youtube, Mail, ShoppingBag, FileText, MessageCircle, Send } from "lucide-react"
+import { BookOpen, Youtube, Mail, CalendarCheck, FileText, MessageCircle, Send } from "lucide-react"
 
 const links = [
   {
-    title: "Мой сайт",
-    description: "Портфолио и услуги",
+    title: "Записаться на пробный урок",
+    description: "Бесплатно — узнайте свой уровень",
     href: "#",
-    icon: Globe,
+    icon: CalendarCheck,
   },
   {
     title: "YouTube канал",
-    description: "Видео и туториалы",
+    description: "Уроки, лайфхаки и разбор ошибок",
     href: "#",
     icon: Youtube,
   },
   {
-    title: "Магазин",
-    description: "Товары и услуги",
+    title: "Курсы и программы",
+    description: "Для подростков и взрослых",
     href: "#",
-    icon: ShoppingBag,
+    icon: BookOpen,
   },
   {
     title: "Telegram",
-    description: "Написать напрямую",
+    description: "Написать мне напрямую",
     href: "#",
     icon: Send,
   },
   {
     title: "Бесплатные материалы",
-    description: "Шаблоны и гайды",
+    description: "Словари, упражнения и шпаргалки",
     href: "#",
     icon: FileText,
   },
@@ -211,8 +211,8 @@ export function LinkBioPage() {
       >
         <motion.div variants={itemVariants} className="pt-2">
           <ProfileSection
-            name="GlassLinks"
-            bio="Креативный дизайнер и разработчик"
+            name="English с удовольствием"
+            bio="Репетитор английского для подростков и взрослых • Говорим, понимаем, не боимся"
             imageUrl="/images/544291433-18043960274659947-5766591717842883293-n.jpg"
           />
         </motion.div>
@@ -226,7 +226,7 @@ export function LinkBioPage() {
         </motion.div>
 
         <motion.div variants={itemVariants} className="pb-2">
-          <SocialFooter socials={socials} copyright="2025 GlassLinks" />
+          <SocialFooter socials={socials} copyright="2026 English с удовольствием" />
         </motion.div>
       </motion.div>
     </main>
