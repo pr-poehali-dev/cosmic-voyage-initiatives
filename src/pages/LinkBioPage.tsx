@@ -12,8 +12,8 @@ const links = [
     icon: CalendarCheck,
   },
   {
-    title: "YouTube канал",
-    description: "Уроки, лайфхаки и разбор ошибок",
+    title: "Английский по песням",
+    description: "Учим язык через музыку",
     href: "#",
     icon: Youtube,
   },
