@@ -152,37 +152,89 @@ function OrderPlayer({ ex, onComplete }: { ex: OrderEx; onComplete: () => void }
   )
 }
 
-// ─── Exercise Card (view mode) ────────────────────────────────────────────────
+// ─── Exercise Group (view mode) ───────────────────────────────────────────────
 
-function ExerciseCard({ ex, index }: { ex: SongExercise; index: number }) {
+const TYPE_META = {
+  fill:  { label: "Вставь пропущенное слово", icon: "PenLine",   color: "text-blue-500",   dot: "bg-blue-400"   },
+  match: { label: "Сопоставь слова",          icon: "Shuffle",   color: "text-purple-500", dot: "bg-purple-400" },
+  order: { label: "Собери строчку по порядку",icon: "ListOrdered",color: "text-pink-500",  dot: "bg-pink-400"   },
+} as const
+
+function ExerciseGroup({ type, exercises, groupIndex }: { type: "fill" | "match" | "order"; exercises: SongExercise[]; groupIndex: number }) {
   const [expanded, setExpanded] = useState(false)
-  const [done, setDone] = useState(false)
+  const [current, setCurrent] = useState(0)
+  const [doneSet, setDoneSet] = useState<Set<number>>(new Set())
 
-  const typeLabel = ex.type === "fill" ? "Пропуск" : ex.type === "match" ? "Пары" : "Порядок"
-  const typeColor = ex.type === "fill" ? "text-blue-400" : ex.type === "match" ? "text-purple-400" : "text-pink-400"
+  const meta = TYPE_META[type]
+  const allDone = doneSet.size === exercises.length
+  const ex = exercises[current]
+
+  const handleComplete = () => {
+    setDoneSet(prev => new Set([...prev, current]))
+    if (current < exercises.length - 1) setCurrent(c => c + 1)
+  }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: groupIndex * 0.08 }}
       className="rounded-2xl overflow-hidden" style={glassStyle}>
-      <button className="w-full flex items-center gap-3 px-4 py-3.5 text-left" onClick={() => setExpanded(v => !v)}>
-        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${done ? "bg-green-100 text-green-600" : "bg-white/60 text-gray-500 border border-white/80"}`}>
-          {done ? <Icon name="Check" size={13} /> : index + 1}
+      {/* Header */}
+      <button className="w-full flex items-center gap-3 px-4 py-4 text-left" onClick={() => setExpanded(v => !v)}>
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${allDone ? "bg-green-100" : "bg-white/60 border border-white/80"}`}>
+          {allDone
+            ? <Icon name="CheckCheck" size={17} className="text-green-500" />
+            : <Icon name={meta.icon as Parameters<typeof Icon>[0]["name"]} size={17} className={meta.color} />}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className={`text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${typeColor}`}>{typeLabel}</span>
+          <p className={`text-sm font-semibold ${allDone ? "text-green-600" : "text-gray-800"}`}>{meta.label}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex gap-1">
+              {exercises.map((_, i) => (
+                <div key={i} className={`h-1 w-4 rounded-full transition-all duration-300 ${doneSet.has(i) ? meta.dot : i === current && expanded ? "bg-gray-300" : "bg-gray-200"}`} />
+              ))}
+            </div>
+            <span className="text-[10px] text-gray-400">{doneSet.size}/{exercises.length}</span>
           </div>
-          <p className="text-sm text-gray-800 font-medium leading-snug truncate">{ex.instruction}</p>
         </div>
         <Icon name={expanded ? "ChevronUp" : "ChevronDown"} size={16} className="text-gray-400 flex-shrink-0" />
       </button>
+
+      {/* Body */}
       <AnimatePresence>
         {expanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-            className="px-4 pb-4 border-t border-white/40 pt-4">
-            {ex.type === "fill" && <FillPlayer ex={ex} onComplete={() => setDone(true)} />}
-            {ex.type === "match" && <MatchPlayer ex={ex} onComplete={() => setDone(true)} />}
-            {ex.type === "order" && <OrderPlayer ex={ex} onComplete={() => setDone(true)} />}
+            className="border-t border-white/40">
+            {/* Sub-navigation */}
+            {exercises.length > 1 && (
+              <div className="flex items-center gap-1 px-4 pt-3 pb-2 overflow-x-auto scrollbar-none">
+                {exercises.map((_, i) => (
+                  <button key={i} onClick={() => setCurrent(i)}
+                    className={`flex-shrink-0 w-7 h-7 rounded-full text-xs font-bold transition-all ${i === current ? "bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-sm" : doneSet.has(i) ? "bg-green-100 text-green-600 border border-green-200" : "bg-white/60 border border-white/80 text-gray-500 hover:bg-white/80"}`}>
+                    {doneSet.has(i) ? "✓" : i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Current sub-exercise */}
+            <div className="px-4 pb-4 pt-2">
+              <p className="text-xs text-gray-500 mb-3">{ex.instruction}</p>
+              <AnimatePresence mode="wait">
+                <motion.div key={ex.id}
+                  initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}>
+                  {ex.type === "fill"  && <FillPlayer  key={ex.id} ex={ex} onComplete={handleComplete} />}
+                  {ex.type === "match" && <MatchPlayer key={ex.id} ex={ex} onComplete={handleComplete} />}
+                  {ex.type === "order" && <OrderPlayer key={ex.id} ex={ex} onComplete={handleComplete} />}
+                </motion.div>
+              </AnimatePresence>
+              {allDone && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 text-center space-y-1">
+                  <p className="text-green-600 font-semibold text-sm">Все подзадания выполнены! 🎉</p>
+                  <button onClick={() => { setCurrent(0); setDoneSet(new Set()) }}
+                    className="text-xs text-purple-500 hover:text-purple-700">Пройти снова</button>
+                </motion.div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -475,18 +527,23 @@ export function SongDetailPage() {
               </div>
 
               {/* Exercises */}
-              {songData.exercises.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center px-1 gap-2">
-                    <Icon name="Pencil" size={15} className="text-purple-400" />
-                    <h2 className="text-sm font-semibold text-gray-700">Задания</h2>
-                    <span className="text-xs text-gray-400 ml-auto">{songData.exercises.length} шт.</span>
+              {songData.exercises.length > 0 && (() => {
+                const groups = (["fill", "match", "order"] as const)
+                  .map(type => ({ type, items: songData.exercises.filter(e => e.type === type) }))
+                  .filter(g => g.items.length > 0)
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center px-1 gap-2">
+                      <Icon name="Pencil" size={15} className="text-purple-400" />
+                      <h2 className="text-sm font-semibold text-gray-700">Задания</h2>
+                      <span className="text-xs text-gray-400 ml-auto">{groups.length} раздела</span>
+                    </div>
+                    {groups.map((g, i) => (
+                      <ExerciseGroup key={g.type} type={g.type} exercises={g.items} groupIndex={i} />
+                    ))}
                   </div>
-                  {songData.exercises.map((exercise, i) => (
-                    <ExerciseCard key={exercise.id} ex={exercise} index={i} />
-                  ))}
-                </div>
-              )}
+                )
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
