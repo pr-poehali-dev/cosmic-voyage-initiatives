@@ -32,6 +32,30 @@ export type Song = {
   exercises: SongExercise[]
 }
 
+// ─── Song store (persisted to localStorage) ──────────────────────────────────
+
+const STORAGE_KEY = "custom_songs"
+
+export function loadCustomSongs(): Song[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveCustomSong(song: Song): void {
+  const existing = loadCustomSongs()
+  const updated = [...existing.filter(s => s.id !== song.id), song]
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+}
+
+export function deleteCustomSong(id: string): void {
+  const existing = loadCustomSongs()
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(existing.filter(s => s.id !== id)))
+}
+
 // ─── Songs data ───────────────────────────────────────────────────────────────
 
 export const songs: Song[] = [
