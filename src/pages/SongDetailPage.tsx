@@ -152,6 +152,44 @@ function OrderPlayer({ ex, onComplete }: { ex: OrderEx; onComplete: () => void }
   )
 }
 
+// ─── Exercise Card (view mode) ────────────────────────────────────────────────
+
+function ExerciseCard({ ex, index }: { ex: SongExercise; index: number }) {
+  const [expanded, setExpanded] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const typeLabel = ex.type === "fill" ? "Пропуск" : ex.type === "match" ? "Пары" : "Порядок"
+  const typeColor = ex.type === "fill" ? "text-blue-400" : ex.type === "match" ? "text-purple-400" : "text-pink-400"
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
+      className="rounded-2xl overflow-hidden" style={glassStyle}>
+      <button className="w-full flex items-center gap-3 px-4 py-3.5 text-left" onClick={() => setExpanded(v => !v)}>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${done ? "bg-green-100 text-green-600" : "bg-white/60 text-gray-500 border border-white/80"}`}>
+          {done ? <Icon name="Check" size={13} /> : index + 1}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={`text-[10px] font-bold uppercase tracking-wide flex-shrink-0 ${typeColor}`}>{typeLabel}</span>
+          </div>
+          <p className="text-sm text-gray-800 font-medium leading-snug truncate">{ex.instruction}</p>
+        </div>
+        <Icon name={expanded ? "ChevronUp" : "ChevronDown"} size={16} className="text-gray-400 flex-shrink-0" />
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+            className="px-4 pb-4 border-t border-white/40 pt-4">
+            {ex.type === "fill" && <FillPlayer ex={ex} onComplete={() => setDone(true)} />}
+            {ex.type === "match" && <MatchPlayer ex={ex} onComplete={() => setDone(true)} />}
+            {ex.type === "order" && <OrderPlayer ex={ex} onComplete={() => setDone(true)} />}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
 // ─── Exercise Editor ──────────────────────────────────────────────────────────
 
 function ExerciseEditor({ exercises, onChange }: { exercises: SongExercise[]; onChange: (e: SongExercise[]) => void }) {
@@ -161,6 +199,13 @@ function ExerciseEditor({ exercises, onChange }: { exercises: SongExercise[]; on
   const update = (id: string, patch: Partial<SongExercise>) =>
     onChange(exercises.map(e => e.id === id ? { ...e, ...patch } as SongExercise : e))
   const remove = (id: string) => onChange(exercises.filter(e => e.id !== id))
+  const move = (idx: number, dir: -1 | 1) => {
+    const next = idx + dir
+    if (next < 0 || next >= exercises.length) return
+    const arr = [...exercises]
+    ;[arr[idx], arr[next]] = [arr[next], arr[idx]]
+    onChange(arr)
+  }
 
   const addExercise = () => {
     const id = `ex-${Date.now()}`
@@ -179,6 +224,16 @@ function ExerciseEditor({ exercises, onChange }: { exercises: SongExercise[]; on
           <button className="w-full flex items-center justify-between px-4 py-3 text-left"
             onClick={() => setOpen(open === ex.id ? null : ex.id)}>
             <div className="flex items-center gap-2 min-w-0">
+              <div className="flex flex-col gap-0.5 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                <button disabled={idx === 0} onClick={() => move(idx, -1)}
+                  className="w-5 h-4 flex items-center justify-center rounded text-gray-400 hover:text-purple-500 disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                  <Icon name="ChevronUp" size={12} />
+                </button>
+                <button disabled={idx === exercises.length - 1} onClick={() => move(idx, 1)}
+                  className="w-5 h-4 flex items-center justify-center rounded text-gray-400 hover:text-purple-500 disabled:opacity-20 disabled:cursor-not-allowed transition-colors">
+                  <Icon name="ChevronDown" size={12} />
+                </button>
+              </div>
               <span className="text-xs font-semibold text-gray-400 flex-shrink-0">#{idx + 1}</span>
               <span className="text-xs font-semibold uppercase tracking-wide text-purple-400 flex-shrink-0">
                 {ex.type === "fill" ? "Пропуск" : ex.type === "match" ? "Пары" : "Порядок"}
@@ -283,15 +338,11 @@ export function SongDetailPage() {
   const [songData, setSongData] = useState<Song | null>(baseSong ?? null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [showTranslation, setShowTranslation] = useState<Record<string, boolean>>({})
-  const [currentTask, setCurrentTask] = useState(0)
-  const [tasksDone, setTasksDone] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const updateExercises = useCallback((exs: SongExercise[]) => {
     setSongData(s => s ? { ...s, exercises: exs } : s)
-    setCurrentTask(0)
-    setTasksDone(false)
   }, [])
 
   if (!songData) {
@@ -308,16 +359,11 @@ export function SongDetailPage() {
     )
   }
 
-  const ex = songData.exercises[currentTask]
   const toggleTr = (key: string) => setShowTranslation(p => ({ ...p, [key]: !p[key] }))
   const handleAudio = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setAudioUrl(URL.createObjectURL(file))
-  }
-  const handleTaskComplete = () => {
-    if (currentTask < songData.exercises.length - 1) setCurrentTask(t => t + 1)
-    else setTasksDone(true)
   }
 
   return (
@@ -431,47 +477,14 @@ export function SongDetailPage() {
               {/* Exercises */}
               {songData.exercises.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
-                    <div className="flex items-center gap-2">
-                      <Icon name="Pencil" size={15} className="text-purple-400" />
-                      <h2 className="text-sm font-semibold text-gray-700">Задания</h2>
-                    </div>
-                    <span className="text-xs text-gray-400">{Math.min(currentTask + 1, songData.exercises.length)} / {songData.exercises.length}</span>
+                  <div className="flex items-center px-1 gap-2">
+                    <Icon name="Pencil" size={15} className="text-purple-400" />
+                    <h2 className="text-sm font-semibold text-gray-700">Задания</h2>
+                    <span className="text-xs text-gray-400 ml-auto">{songData.exercises.length} шт.</span>
                   </div>
-                  <div className="flex gap-1">
-                    {songData.exercises.map((_, i) => (
-                      <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-500 ${i < currentTask || tasksDone ? "bg-gradient-to-r from-purple-400 to-pink-400" : i === currentTask ? "bg-purple-300" : "bg-gray-200"}`} />
-                    ))}
-                  </div>
-                  <AnimatePresence mode="wait">
-                    {tasksDone ? (
-                      <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                        className="rounded-2xl p-6 text-center space-y-3" style={glassStyle}>
-                        <div className="text-4xl">🎉</div>
-                        <p className="text-gray-800 font-bold">Все задания выполнены!</p>
-                        <p className="text-xs text-gray-400">Отличная работа с «{songData.title}»</p>
-                        <div className="flex justify-center gap-3 pt-1">
-                          <button onClick={() => { setCurrentTask(0); setTasksDone(false) }}
-                            className="px-4 py-2 rounded-xl bg-white/60 border border-white/80 text-gray-600 text-sm hover:bg-white/80 transition-all">
-                            Пройти снова
-                          </button>
-                          <button onClick={() => navigate("/songs")}
-                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium">
-                            К другим песням
-                          </button>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <motion.div key={ex?.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                        className="rounded-2xl p-5 space-y-4" style={glassStyle}>
-                        <h3 className="text-sm font-semibold text-gray-800">{ex?.instruction}</h3>
-                        {ex?.type === "fill" && <FillPlayer ex={ex} onComplete={handleTaskComplete} />}
-                        {ex?.type === "match" && <MatchPlayer ex={ex} onComplete={handleTaskComplete} />}
-                        {ex?.type === "order" && <OrderPlayer ex={ex} onComplete={handleTaskComplete} />}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {songData.exercises.map((exercise, i) => (
+                    <ExerciseCard key={exercise.id} ex={exercise} index={i} />
+                  ))}
                 </div>
               )}
             </motion.div>
